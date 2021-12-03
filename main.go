@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -33,13 +35,20 @@ func main() {
 	}
 
 	// execute spdx-sbom-generator cli
-	if output, err := exec.Command("./spdx-sbom-generator", inputCommands).Output(); err != nil {
-		fmt.Println("An error occurred during spdx-sbom-generator operation:", err)
+	cmd := exec.Command("./spdx-sbom-generator", strings.Fields(inputCommands)...)
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("An error occurred during spdx-sbom-generator operation: %v, stderr: (%s)", err, stderr.String())
 		os.Exit(1)
-	} else {
-		fmt.Println("--- OUTPUT ---")
-		fmt.Printf("%s\n", output)
+		return
 	}
+
+	fmt.Println("--- OUTPUT ---")
+	fmt.Printf("%s\n%s\n", out.String(), stderr.String())
 }
 
 // DownloadFile will download a url and store it in local current directory
